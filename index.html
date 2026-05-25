@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RepoRadar — Discover Trending GitHub Repos</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c27;
+    --border: #2a2a3d;
+    --accent: #7c6dfa;
+    --accent2: #fa6d6d;
+    --text: #f0f0f8;
+    --muted: #6b6b8a;
+    --green: #4ade80;
+    --yellow: #facc15;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 60px 60px;
+    opacity: 0.3;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .glow {
+    position: fixed;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(124,109,250,0.12) 0%, transparent 70%);
+    top: -200px; left: -100px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .glow2 {
+    position: fixed;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(250,109,109,0.08) 0%, transparent 70%);
+    bottom: 0; right: -100px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* Header */
+  header {
+    padding: 60px 0 40px;
+    text-align: center;
+  }
+
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-size: 12px;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.05em;
+    margin-bottom: 24px;
+  }
+
+  .logo-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  h1 {
+    font-size: clamp(40px, 8vw, 72px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    margin-bottom: 16px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    font-size: 16px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-weight: 400;
+  }
+
+  /* Search */
+  .search-section {
+    margin: 40px 0 32px;
+  }
+
+  .search-box {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .search-input-wrap {
+    flex: 1;
+    position: relative;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 18px;
+    pointer-events: none;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px 16px 48px;
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type="text"]:focus { border-color: var(--accent); }
+  input[type="text"]::placeholder { color: var(--muted); }
+
+  .search-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 16px 28px;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  .search-btn:hover { opacity: 0.9; }
+  .search-btn:active { transform: scale(0.98); }
+
+  /* Filters */
+  .filters {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .filter-label {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin-right: 4px;
+  }
+
+  .filter-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .filter-btn:hover { border-color: var(--accent); color: var(--text); }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* Suggestions */
+  .suggestions {
+    margin-bottom: 32px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .suggest-label {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .chip {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 4px 14px;
+    font-size: 12px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Results */
+  #results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .results-count {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .results-count span { color: var(--accent); }
+
+  /* Cards */
+  #results {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-bottom: 80px;
+  }
+
+  .repo-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    transition: border-color 0.2s, transform 0.2s;
+    animation: fadeUp 0.3s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .repo-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .repo-name {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+    text-decoration: none;
+    transition: color 0.15s;
+    line-height: 1.3;
+  }
+
+  .repo-name:hover { color: var(--accent); }
+
+  .repo-author {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 8px;
+  }
+
+  .repo-desc {
+    font-size: 14px;
+    color: #a0a0be;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    font-family: 'DM Mono', monospace;
+    font-weight: 400;
+  }
+
+  .card-meta {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .meta-item svg { flex-shrink: 0; }
+
+  .lang-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .stars-badge {
+    margin-left: auto;
+    background: rgba(124,109,250,0.12);
+    border: 1px solid rgba(124,109,250,0.25);
+    border-radius: 100px;
+    padding: 4px 14px;
+    font-size: 13px;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* State screens */
+  .state-screen {
+    text-align: center;
+    padding: 80px 20px;
+    display: none;
+  }
+
+  .state-screen.visible { display: block; }
+
+  .state-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+
+  .state-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .state-desc {
+    font-size: 14px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Loader */
+  .loader {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    padding: 60px;
+    gap: 16px;
+  }
+
+  .loader.visible { display: flex; }
+
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loader-text {
+    font-size: 13px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  footer {
+    text-align: center;
+    padding: 32px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    position: relative;
+    z-index: 1;
+  }
+
+  @media (max-width: 600px) {
+    .search-box { flex-direction: column; }
+    .search-btn { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="glow"></div>
+<div class="glow2"></div>
+
+<div class="container">
+  <header>
+    <div class="logo-badge">
+      <div class="logo-dot"></div>
+      LIVE VIA GITHUB API
+    </div>
+    <h1>Repo<span>Radar</span></h1>
+    <p class="subtitle">discover trending github repos by topic</p>
+  </header>
+
+  <div class="search-section">
+    <div class="search-box">
+      <div class="search-input-wrap">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="search-input" placeholder="e.g. machine learning, web design, healthcare..." />
+      </div>
+      <button class="search-btn" onclick="search()">Search</button>
+    </div>
+
+    <div class="filters">
+      <span class="filter-label">period →</span>
+      <button class="filter-btn active" data-period="weekly" onclick="setFilter(this)">This Week</button>
+      <button class="filter-btn" data-period="daily" onclick="setFilter(this)">Today</button>
+      <button class="filter-btn" data-period="monthly" onclick="setFilter(this)">This Month</button>
+    </div>
+  </div>
+
+  <div class="suggestions">
+    <span class="suggest-label">try →</span>
+    <span class="chip" onclick="quickSearch('machine learning')">machine learning</span>
+    <span class="chip" onclick="quickSearch('web design')">web design</span>
+    <span class="chip" onclick="quickSearch('healthcare')">healthcare</span>
+    <span class="chip" onclick="quickSearch('react')">react</span>
+    <span class="chip" onclick="quickSearch('open ai')">open ai</span>
+    <span class="chip" onclick="quickSearch('cybersecurity')">cybersecurity</span>
+    <span class="chip" onclick="quickSearch('rust')">rust</span>
+  </div>
+
+  <div id="results-header" style="display:none;">
+    <div class="results-count" id="results-count"></div>
+  </div>
+
+  <div class="loader" id="loader">
+    <div class="spinner"></div>
+    <div class="loader-text">scanning github...</div>
+  </div>
+
+  <div class="state-screen" id="empty-state">
+    <div class="state-icon">🛰️</div>
+    <div class="state-title">No repos found</div>
+    <div class="state-desc">try a different topic or time period</div>
+  </div>
+
+  <div id="results"></div>
+</div>
+
+<footer>
+  built with GitHub API · RepoRadar © 2025
+</footer>
+
+<script>
+  const LANG_COLORS = {
+    JavaScript: '#f1e05a', TypeScript: '#3178c6', Python: '#3572A5',
+    Rust: '#dea584', Go: '#00ADD8', Java: '#b07219', 'C++': '#f34b7d',
+    C: '#555555', Ruby: '#701516', Swift: '#F05138', Kotlin: '#A97BFF',
+    PHP: '#4F5D95', Shell: '#89e051', HTML: '#e34c26', CSS: '#563d7c',
+    Vue: '#41b883', Dart: '#00B4AB', 'C#': '#178600'
+  };
+
+  let currentPeriod = 'weekly';
+
+  function setFilter(btn) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentPeriod = btn.dataset.period;
+    const val = document.getElementById('search-input').value.trim();
+    if (val) search();
+  }
+
+  function quickSearch(topic) {
+    document.getElementById('search-input').value = topic;
+    search();
+  }
+
+  document.getElementById('search-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') search();
+  });
+
+  async function search() {
+    const query = document.getElementById('search-input').value.trim();
+    if (!query) return;
+
+    const resultsEl = document.getElementById('results');
+    const loader = document.getElementById('loader');
+    const emptyState = document.getElementById('empty-state');
+    const resultsHeader = document.getElementById('results-header');
+
+    resultsEl.innerHTML = '';
+    emptyState.classList.remove('visible');
+    resultsHeader.style.display = 'none';
+    loader.classList.add('visible');
+
+    // Date filter
+    const now = new Date();
+    let daysBack = currentPeriod === 'daily' ? 1 : currentPeriod === 'weekly' ? 7 : 30;
+    const since = new Date(now - daysBack * 86400000).toISOString().split('T')[0];
+
+    const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(query)}+created:>${since}&sort=stars&order=desc&per_page=20`;
+
+    try {
+      const res = await fetch(url, {
+        headers: { 'Accept': 'application/vnd.github.v3+json' }
+      });
+
+      if (!res.ok) {
+        if (res.status === 403) throw new Error('rate_limit');
+        throw new Error('api_error');
+      }
+
+      const data = await res.json();
+      loader.classList.remove('visible');
+
+      if (!data.items || data.items.length === 0) {
+        emptyState.classList.add('visible');
+        return;
+      }
+
+      resultsHeader.style.display = 'flex';
+      document.getElementById('results-count').innerHTML =
+        `found <span>${data.items.length}</span> repos matching "<span>${query}</span>"`;
+
+      data.items.forEach((repo, i) => {
+        resultsEl.appendChild(buildCard(repo, i));
+      });
+
+    } catch (err) {
+      loader.classList.remove('visible');
+      resultsEl.innerHTML = `
+        <div class="state-screen visible">
+          <div class="state-icon">${err.message === 'rate_limit' ? '⏳' : '⚠️'}</div>
+          <div class="state-title">${err.message === 'rate_limit' ? 'Rate limit hit' : 'Something went wrong'}</div>
+          <div class="state-desc">${err.message === 'rate_limit' ? 'GitHub API has a limit for unauthenticated requests. Wait a minute and try again.' : 'Could not reach GitHub API. Check your connection.'}</div>
+        </div>`;
+    }
+  }
+
+  function buildCard(repo, index) {
+    const card = document.createElement('div');
+    card.className = 'repo-card';
+    card.style.animationDelay = `${index * 0.05}s`;
+
+    const stars = repo.stargazers_count.toLocaleString();
+    const lang = repo.language || 'Unknown';
+    const color = LANG_COLORS[lang] || '#888';
+    const desc = repo.description
+      ? (repo.description.length > 120 ? repo.description.slice(0, 120) + '…' : repo.description)
+      : 'No description provided.';
+
+    card.innerHTML = `
+      <div class="card-top">
+        <div>
+          <a class="repo-name" href="${repo.html_url}" target="_blank">${repo.name}</a>
+          <div class="repo-author">by ${repo.owner.login}</div>
+        </div>
+        <div class="stars-badge">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          ${stars}
+        </div>
+      </div>
+      <p class="repo-desc">${desc}</p>
+      <div class="card-meta">
+        <div class="meta-item">
+          <span class="lang-dot" style="background:${color}"></span>
+          ${lang}
+        </div>
+        <div class="meta-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM7.8 6.4l1-2.4H18V2H6.6L5.3 5H2v2h2.1l3.6 8.6-1.4 2.4H19v-2H8.4l1-1.7L18 9H9.6L7.8 6.4z"/></svg>
+          ${repo.forks_count.toLocaleString()} forks
+        </div>
+        <div class="meta-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+          ${new Date(repo.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })}
+        </div>
+      </div>
+    `;
+    return card;
+  }
+</script>
+</body>
+</html>
